@@ -53,3 +53,39 @@
 - 卡片悬浮：translateY(-2px) + shadow 增强，0.2s ease
 - 列表入场：stagger translateY(12px) → 0，0.3s ease-out
 - 抽屉滑动：translateY(100%) → 0，0.3s cubic-bezier(0.32, 0.72, 0, 1)
+
+## 组件清单
+
+### 布局组件
+| 组件 | 路径 | 说明 |
+|------|------|------|
+| AppHeader | `components/layout/AppHeader.vue` | 顶部导航栏 |
+| MobileDrawer | `components/layout/MobileDrawer.vue` | 移动端底部可拖拽抽屉 |
+| DesktopSidebar | `components/layout/DesktopSidebar.vue` | 桌面端侧边栏列表 |
+
+### 地图组件
+| 组件 | 路径 | 说明 |
+|------|------|------|
+| FoodMap | `components/map/FoodMap.vue` | Leaflet 地图主组件 |
+| MapMarker | `components/map/MapMarker.ts` | 标记点图标生成器（纯逻辑模块） |
+| MapPopup | `components/map/MapPopup.vue` | 弹窗内容组件 |
+
+### 美食内容组件
+| 组件 | 路径 | 说明 |
+|------|------|------|
+| FoodCard | `components/food/FoodCard.vue` | 店铺卡片 |
+| FoodDetail | `components/food/FoodDetail.vue` | 店铺详情（弹窗/页面模式） |
+| DishCard | `components/food/DishCard.vue` | 特色美食卡片 |
+| CategoryFilter | `components/food/CategoryFilter.vue` | 分类筛选栏 |
+
+### 路线组件
+| 组件 | 路径 | 说明 |
+|------|------|------|
+| RouteCard | `components/route/RouteCard.vue` | 单日路线卡片 |
+
+### 通用组件
+| 组件 | 路径 | 说明 |
+|------|------|------|
+| SearchBar | `components/common/SearchBar.vue` | 搜索框 |
+| TagChip | `components/common/TagChip.vue` | 标签 |
+| NavButton | `components/common/NavButton.vue` | 一键导航按钮 |

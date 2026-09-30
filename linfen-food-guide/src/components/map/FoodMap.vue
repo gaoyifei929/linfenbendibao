@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * Leaflet 地图主组件
+ * - 使用 MapMarker 模块生成自定义图标
+ * - 弹窗内容保持 HTML 字符串形式（Leaflet 限制）
+ */
 import { ref, onMounted, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -6,6 +11,7 @@ import type { Spot } from '@/types/spot'
 import type { CategoryId, Category } from '@/types/category'
 import { toGcj } from '@/utils/coordTransform'
 import { getAmapNavUrl } from '@/utils/navigation'
+import { createMarkerIcon } from '@/utils/mapMarker'
 
 const props = defineProps<{
   spots: Spot[]
@@ -62,6 +68,21 @@ watch(() => props.selectedSpotId, (id) => {
   }
 })
 
+/** 生成弹窗 HTML（Leaflet 要求字符串形式） */
+function buildPopupHtml(spot: Spot, category: Category, navUrl: string): string {
+  return `
+    <div style="font-family:'PingFang SC','Microsoft YaHei',sans-serif;padding:12px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${spot.name}</div>
+      <span style="display:inline-block;font-size:11px;color:#fff;background:${category.color};border-radius:4px;padding:1px 7px;margin-bottom:6px;">${category.name}</span>
+      <div style="font-size:12px;color:#666;margin-bottom:4px;">📍 ${spot.address}</div>
+      ${spot.dishes.length ? `<div style="font-size:12px;margin-bottom:4px;">🍴 ${spot.dishes.join(' · ')}</div>` : ''}
+      ${spot.note ? `<div style="font-size:12px;color:#996;background:#fdf9ef;border-radius:6px;padding:6px 8px;margin:6px 0;line-height:1.5;">${spot.note}</div>` : ''}
+      ${spot.priceRange ? `<div style="font-size:12px;color:#D94F3D;font-weight:500;margin-bottom:6px;">💰 ${spot.priceRange}</div>` : ''}
+      <a href="${navUrl}" target="_blank" rel="noopener" style="display:inline-block;background:#0A7FF2;color:#fff;text-decoration:none;border-radius:6px;padding:5px 14px;font-size:12px;">🧭 高德导航去这里</a>
+    </div>
+  `
+}
+
 function renderMarkers() {
   if (!map) return
 
@@ -79,33 +100,16 @@ function renderMarkers() {
     const [lat, lng] = toGcj(spot.coords[0], spot.coords[1], spot.coordSystem)
     const cat = props.categories[spot.category]
 
-    // 自定义图标
-    const isLandmark = spot.category === 'jd' || spot.category === 'cj'
-    const iconHtml = isLandmark
-      ? `<div style="width:22px;height:22px;border-radius:50%;background:${cat.color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;">${spot.category === 'jd' ? '◆' : '★'}</div>`
-      : `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${cat.color};transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);color:#fff;font-size:12px;font-weight:700;">${spot.id.split('-')[1]?.replace(/^0/, '') || ''}</span></div>`
-
-    const icon = L.divIcon({
-      className: '',
-      html: iconHtml,
-      iconSize: isLandmark ? [22, 22] : [26, 26],
-      iconAnchor: isLandmark ? [11, 11] : [13, 26],
-      popupAnchor: [0, -26],
+    // 使用 MapMarker 模块生成图标
+    const icon = createMarkerIcon({
+      categoryId: spot.category,
+      category: cat,
+      spotId: spot.id,
     })
 
     // 弹窗内容
     const navUrl = getAmapNavUrl(lat, lng, spot.name)
-    const popupHtml = `
-      <div style="font-family:'PingFang SC','Microsoft YaHei',sans-serif;padding:12px;">
-        <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${spot.name}</div>
-        <span style="display:inline-block;font-size:11px;color:#fff;background:${cat.color};border-radius:4px;padding:1px 7px;margin-bottom:6px;">${cat.name}</span>
-        <div style="font-size:12px;color:#666;margin-bottom:4px;">📍 ${spot.address}</div>
-        ${spot.dishes.length ? `<div style="font-size:12px;margin-bottom:4px;">🍴 ${spot.dishes.join(' · ')}</div>` : ''}
-        ${spot.note ? `<div style="font-size:12px;color:#996;background:#fdf9ef;border-radius:6px;padding:6px 8px;margin:6px 0;line-height:1.5;">${spot.note}</div>` : ''}
-        ${spot.priceRange ? `<div style="font-size:12px;color:#D94F3D;font-weight:500;margin-bottom:6px;">💰 ${spot.priceRange}</div>` : ''}
-        <a href="${navUrl}" target="_blank" rel="noopener" style="display:inline-block;background:#0A7FF2;color:#fff;text-decoration:none;border-radius:6px;padding:5px 14px;font-size:12px;">🧭 高德导航去这里</a>
-      </div>
-    `
+    const popupHtml = buildPopupHtml(spot, cat, navUrl)
 
     const marker = L.marker([lat, lng], { icon, riseOnHover: true })
       .bindPopup(popupHtml, { maxWidth: 300 })

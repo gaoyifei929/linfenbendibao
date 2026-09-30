@@ -1,0 +1,23 @@
+[
+  {
+    "id": "douyin-yingying",
+    "type": "social-media",
+    "name": "抖音「盈盈吃不饱」",
+    "description": "临汾本地美食博主，提供大量实地探店视频",
+    "url": "https://www.douyin.com"
+  },
+  {
+    "id": "local-reviews",
+    "type": "article",
+    "name": "本地美食测评合集",
+    "description": "多篇本地美食测评文章交叉验证",
+    "url": ""
+  },
+  {
+    "id": "amap-poi",
+    "type": "map-data",
+    "name": "高德地图 POI",
+    "description": "店铺地址、坐标等基础地理信息",
+    "url": "https://www.amap.com"
+  }
+]

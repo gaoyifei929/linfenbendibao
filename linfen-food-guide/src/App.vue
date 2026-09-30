@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import HomeView from '@/views/HomeView.vue'
+// 根组件：提供路由出口
 </script>
 
 <template>
-  <HomeView />
+  <router-view />
 </template>
