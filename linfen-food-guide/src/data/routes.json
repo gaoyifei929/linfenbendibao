@@ -1,0 +1,32 @@
+[
+  {
+    "day": 1,
+    "title": "Day 1",
+    "theme": "老城核心（鼓楼—平阳广场—迎春街）",
+    "gradientFrom": "#D94F3D",
+    "gradientTo": "#E8A84C",
+    "steps": [
+      { "time": "早餐", "title": "闷闷乡村面食馆", "description": "豆腐菜 + 甜油条，地道临汾早餐开局" },
+      { "time": "上午", "title": "吴家熏肉 → 稷山麻花", "description": "切半斤熏肉带走，再来份稷山麻花当零嘴" },
+      { "time": "午餐", "title": "小贝或白老三牛肉丸子面", "description": "配太钢汽水，体验临汾人的信仰级早餐/午餐" },
+      { "time": "下午", "title": "鼓楼 + 平阳广场", "description": "消食拍照，广场对面来盘十元炒刀削" },
+      { "time": "晚餐", "title": "浮山烧麦馆（扁担巷）", "description": "羊肉烧麦爆汁，晋南名点" },
+      { "time": "夜宵", "title": "谢手艺吉县麻辣串", "description": "或鼓楼西大街夜市小吃" }
+    ]
+  },
+  {
+    "day": 2,
+    "title": "Day 2",
+    "theme": "重口味 + 洪洞支线",
+    "gradientFrom": "#8B5CF6",
+    "gradientTo": "#3B82F6",
+    "steps": [
+      { "time": "早餐", "title": "崔记油茶麻花 或 婆婆神羊汤", "description": "油茶泡麻花暖胃，或火烧馍泡羊汤" },
+      { "time": "上午", "title": "小琴劲道狗舌头", "description": "炒面片锅气之王，饭点必排队" },
+      { "time": "午餐", "title": "三刚 / 十凤 / 薛老五", "description": "换一家丸子面体验不同风格" },
+      { "time": "下午", "title": "洪洞大槐树寻根祭祖园", "description": "打车北上约40分钟，\"问我祖先在何处\"" },
+      { "time": "晚餐", "title": "洪洞当地美食 或 张老四羊汤", "description": "酥肉面/羊杂烩/黄米蒸饭，或回市区喝羊汤" },
+      { "time": "返程", "title": "临汾站 / 临汾西站", "description": "普速站就在市中心，高铁站打车20分钟" }
+    ]
+  }
+]

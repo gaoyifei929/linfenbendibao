@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+/* ===== 设计系统 Token ===== */
+@theme {
+  /* 色彩 - 临汾美食暖色系 */
+  --color-primary: #D94F3D;
+  --color-primary-dark: #B83A2A;
+  --color-primary-light: #F2C4BE;
+  --color-secondary: #E8A84C;
+  --color-secondary-light: #F5DEB3;
+
+  /* 背景与表面 */
+  --color-bg: #FAF7F2;
+  --color-card: #FFFFFF;
+  --color-card-hover: #FDF9F5;
+
+  /* 文字 */
+  --color-text: #2B2B2B;
+  --color-text-muted: #6B6560;
+  --color-text-light: #A8A098;
+
+  /* 边框与分割线 */
+  --color-border: #EDE8E1;
+  --color-border-light: #F5F0EA;
+
+  /* 分类色 */
+  --color-cat-wz: #D94F3D;   /* 牛肉丸子面 - 红油色 */
+  --color-cat-xc: #E8A84C;   /* 特色小吃 - 麦黄色 */
+  --color-cat-yt: #8B5CF6;   /* 羊汤 - 紫色 */
+  --color-cat-jd: #3B82F6;   /* 地标交通 - 蓝色 */
+  --color-cat-cj: #10B981;   /* 周边景点 - 绿色 */
+
+  /* 圆角 */
+  --radius-card: 16px;
+  --radius-btn: 12px;
+  --radius-tag: 8px;
+
+  /* 阴影 */
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-float: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+  /* 字体 */
+  --font-sans: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
+}
+
+/* ===== 全局基础样式 ===== */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 隐藏滚动条但保留功能 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Leaflet 样式覆盖 */
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-card) !important;
+  padding: 0 !important;
+  box-shadow: var(--shadow-float) !important;
+  overflow: hidden;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: 280px !important;
+}
+.leaflet-popup-tip {
+  box-shadow: none !important;
+}
