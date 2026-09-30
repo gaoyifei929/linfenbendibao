@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>国庆临汾美食地图 · 48小时逛吃指南</title>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+      onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';">
+<style>
+  :root{
+    --c-wz:#e03e36; --c-xc:#e8842c; --c-yt:#8e44ad; --c-jd:#2f7fd1; --c-cj:#2fa36b;
+    --bg:#faf6f0; --card:#ffffff; --ink:#2b2b2b; --muted:#7a7268; --line:#ece4d8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--ink);}
+  a{color:#c0392b;}
+
+  /* ===== 头部 ===== */
+  header{background:linear-gradient(135deg,#8e2318 0%,#c0392b 55%,#e8842c 100%);color:#fff;padding:22px 20px 18px;}
+  header .wrap{max-width:1280px;margin:0 auto;}
+  header h1{font-size:24px;letter-spacing:1px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  header h1 .badge{font-size:12px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);padding:3px 10px;border-radius:999px;font-weight:normal;}
+  header p.sub{margin-top:8px;font-size:13px;line-height:1.7;opacity:.95;}
+  header p.sub b{background:rgba(0,0,0,.18);padding:1px 6px;border-radius:4px;}
+
+  /* ===== 主布局 ===== */
+  .layout{max-width:1280px;margin:16px auto;display:flex;gap:16px;padding:0 16px;align-items:flex-start;}
+  #sidebar{width:395px;flex:none;max-height:calc(100vh - 150px);overflow-y:auto;position:sticky;top:12px;
+           background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;}
+  #map{flex:1;height:calc(100vh - 150px);min-height:520px;border-radius:14px;border:1px solid var(--line);z-index:1;}
+
+  /* ===== 侧栏 ===== */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .fbtn{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;
+        display:flex;align-items:center;gap:6px;transition:.15s;user-select:none;}
+  .fbtn .dot{width:10px;height:10px;border-radius:50%;}
+  .fbtn.off{opacity:.38;filter:grayscale(1);}
+  .fbtn:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.08);}
+  .grouptitle{font-size:14px;font-weight:700;margin:14px 0 8px;display:flex;align-items:center;gap:8px;color:#4a4238;}
+  .grouptitle .dot{width:11px;height:11px;border-radius:50%;flex:none;}
+  .grouptitle small{font-weight:normal;color:var(--muted);font-size:12px;}
+  .spot{display:flex;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;border:1px solid transparent;transition:.15s;}
+  .spot:hover{background:#fdf6ee;border-color:var(--line);}
+  .spot .num{width:24px;height:24px;flex:none;border-radius:50%;color:#fff;font-size:12px;font-weight:700;
+             display:flex;align-items:center;justify-content:center;margin-top:2px;}
+  .spot .info b{font-size:14px;display:block;}
+  .spot .info span{font-size:12px;color:var(--muted);line-height:1.55;display:block;margin-top:2px;}
+  .spot.hidden{display:none;}
+  .side-actions{display:flex;gap:8px;margin-top:12px;}
+  .side-actions button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:8px;padding:7px 0;font-size:13px;cursor:pointer;color:#4a4238;}
+  .side-actions button:hover{background:#fdf6ee;}
+  .tip-box{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;background:#fbf7f1;border:1px dashed #e2d5c3;border-radius:10px;padding:10px 12px;}
+
+  /* ===== 地图 marker ===== */
+  .pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;
+       box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;}
+  .pin span{transform:rotate(45deg);color:#fff;font-size:12px;font-weight:700;}
+  .pin-lm{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.35);
+          display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;}
+  .leaflet-popup-content{font-size:13px;line-height:1.7;min-width:230px;}
+  .leaflet-popup-content b.pname{font-size:15px;}
+  .chip{display:inline-block;font-size:11px;color:#fff;border-radius:4px;padding:1px 7px;margin-left:6px;vertical-align:2px;}
+  .pop-addr{color:#666;font-size:12px;margin:4px 0;}
+  .pop-dish{margin:4px 0;}
+  .pop-note{color:#996;font-size:12px;background:#fdf9ef;border-radius:6px;padding:4px 8px;margin-top:6px;}
+  .nav-btn{display:inline-block;margin-top:8px;background:#0a7ff2;color:#fff!important;text-decoration:none;
+           border-radius:6px;padding:4px 12px;font-size:12px;}
+  .nav-btn:hover{background:#0868c6;}
+
+  /* ===== 下方内容区 ===== */
+  .content{max-width:1280px;margin:0 auto;padding:8px 16px 40px;}
+  .section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-top:18px;}
+  .section h2{font-size:19px;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+  .section .sec-sub{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.7;}
+  .dishes{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:12px;}
+  .dish{border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:#fffdf9;transition:.15s;}
+  .dish:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.07);}
+  .dish b{font-size:14.5px;display:flex;align-items:center;gap:7px;}
+  .dish b .em{font-size:20px;}
+  .dish p{font-size:12.5px;color:#5c554b;line-height:1.75;margin-top:6px;}
+  .dish .where{display:inline-block;margin-top:7px;font-size:11.5px;background:#f4ebdd;color:#8a6d3b;border-radius:5px;padding:2px 8px;}
+
+  .route{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .day{border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .day .dayhead{padding:10px 16px;color:#fff;font-size:15px;font-weight:700;}
+  .day:nth-child(1) .dayhead{background:linear-gradient(90deg,#c0392b,#e8842c);}
+  .day:nth-child(2) .dayhead{background:linear-gradient(90deg,#8e44ad,#2f7fd1);}
+  .day ol{padding:12px 16px 14px 34px;}
+  .day li{font-size:13px;line-height:2.0;color:#4a4238;}
+  .day li b{color:#8e2318;}
+
+  .tips{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
+  .tipcard{border-left:4px solid #e8842c;background:#fffdf9;border-radius:8px;padding:11px 14px;font-size:13px;line-height:1.8;color:#4a4238;}
+  .tipcard b{display:block;color:#8e2318;margin-bottom:2px;}
+
+  details.srcs{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 22px;}
+  details.srcs summary{font-size:15px;font-weight:700;cursor:pointer;color:#4a4238;}
+  details.srcs .body{font-size:12.5px;color:var(--muted);line-height:2.0;margin-top:10px;}
+  details.srcs a{word-break:break-all;}
+  footer{text-align:center;font-size:12px;color:#a89e90;padding:24px 16px 34px;line-height:1.9;}
+
+  @media (max-width:920px){
+    .layout{flex-direction:column;padding:0 10px;}
+    #sidebar{width:100%;position:static;max-height:none;order:2;}
+    #map{order:1;width:100%;height:62vh;min-height:400px;}
+    .route{grid-template-columns:1fr;}
+    header h1{font-size:19px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>🍜 国庆临汾美食地图 <span class="badge">48小时逛吃指南</span></h1>
+    <p class="sub">
+      整理自抖音 <b>盈盈吃不饱🍖</b>《极限48小时逛吃临汾！两天打卡22家美食！》（2025-08-12 发布 · 963.8万赞 · #临汾美食 #牛肉丸子面）
+      及多篇本地美食测评交叉验证 · 「所有的旅行都是出发，到了临汾咱是回家！」
+    </p>
+  </div>
+</header>
+
+<div class="layout">
+  <aside id="sidebar">
+    <div class="filters" id="filters"></div>
+    <div id="spotList"></div>
+    <div class="side-actions">
+      <button onclick="zoomCity()">🏙️ 回到市中心</button>
+      <button onclick="zoomAll()">📍 显示全部点位</button>
+    </div>
+    <div class="tip-box">
+      💡 点击列表或地图圆点查看详情，弹窗内可一键<b>高德导航</b>。坐标为高德坐标系（GCJ-02），个别老店可能搬迁或有分店，出发前建议在高德/百度地图搜店名再确认一次。
+    </div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<div class="content">
+
+  <div class="section">
+    <h2>🥡 视频同类博主还吃过的临汾特色（无固定门店 / 随处可见）</h2>
+    <p class="sec-sub">这些是临汾美食视频的常客，多数没有唯一"名店"，逛街时看到就可以来一份。</p>
+    <div class="dishes">
+      <div class="dish"><b><span class="em">🍚</span>黄米蒸饭</b><p>黄米+红枣+红芸豆层层铺蒸压成糕，撒白糖，软糯香甜；煎成"黄米糕"外脆内糯更香。</p><span class="where">洪洞县 · 传统小吃店</span></div>
+      <div class="dish"><b><span class="em">🍖</span>洪洞酥肉面</b><p>"无酥肉面不成席"，酥肉先炸后炖、入口即化，手工面劲道，是洪洞宴席压轴。</p><span class="where">洪洞 · 大槐树景区周边</span></div>
+      <div class="dish"><b><span class="em">🐑</span>洪洞羊杂烩</b><p>羊头蹄血肝心肠肚一锅烩，原汁原汤，加辣面香菜，酸辣适口无腥不腻。</p><span class="where">洪洞县 · 羊汤馆</span></div>
+      <div class="dish"><b><span class="em">🍜</span>霍州饸饹面</b><p>饸饹床子现压现煮，面条粗圆筋道，浇羊肉臊子，冬天早上一碗浑身暖。</p><span class="where">霍州 · 市区饸饹面馆</span></div>
+      <div class="dish"><b><span class="em">🫓</span>火烧馍</b><p>发面厚饼贴炉膛明火烤，外壳硬脆内里层层软面，1.5~2元一个，掰开蘸羊汤/泡丸子面红汤是一绝。</p><span class="where">街头炉子现烤</span></div>
+      <div class="dish"><b><span class="em">🥟</span>荞麦灌肠 / 猪血灌肠</b><p>蒸熟切片凉拌或炒食，浇醋蒜汁辣椒油，酸辣开胃；猪血灌肠曾是清宫御膳。</p><span class="where">街头摊点 · 一年四季有</span></div>
+      <div class="dish"><b><span class="em">🍢</span>混炒 / 炒刀削</b><p>削好的面直接下锅炒，裹满酱汁锅气扑面，加蛋加肉丝加青椒，十块钱管饱。</p><span class="where">古城路 · 贡院街 · 平阳广场周边</span></div>
+      <div class="dish"><b><span class="em">🧆</span>乡宁油糕</b><p>中国金牌旅游小吃，外皮薄如蝉翼，豆沙/红糖馅咬开流心，烫嘴也停不下来。</p><span class="where">乡宁 · 云丘山 · 市区油糕店</span></div>
+      <div class="dish"><b><span class="em">🥩</span>曲沃腊牛肉</b><p>回民马氏创制300多年，带骨煮制骨髓入汤，咸香带烟熏味，越嚼越香，适合切片凉吃。</p><span class="where">曲沃县 · 清真摊点</span></div>
+      <div class="dish"><b><span class="em">🍖</span>安泽火腿</b><p>山西"金华火腿"，黑猪肉传统腌制自然风干，红白分明，切片清蒸或炒菜。</p><span class="where">安泽县 · 特产店</span></div>
+      <div class="dish"><b><span class="em">🐱</span>猫耳朵</b><p>面粉搓块拇指一捻成"小耳朵"，配卤汁或炒菜，筋滑利口，最接地气的家常面食。</p><span class="where">家常面馆 · 农家乐</span></div>
+      <div class="dish"><b><span class="em">🥤</span>太钢汽水</b><p>山西人的"快乐水"，橘子味浓，配牛肉丸子面解辣神器，本地小卖部都有。</p><span class="where">任意小卖部 · 约3元</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🗺️ 两天一夜·48小时参考路线（视频同款节奏）</h2>
+    <p class="sec-sub">按点位就近串联，步行+共享单车为主；国庆人多，热门店建议错峰。</p>
+    <div class="route">
+      <div class="day">
+        <div class="dayhead">Day 1 · 老城核心（鼓楼—平阳广场—迎春街）</div>
+        <ol>
+          <li><b>早餐</b>：⑧ 闷闷乡村面食馆 —— 豆腐菜 + 甜油条，地道临汾早餐开局</li>
+          <li><b>上午</b>：⑪ 吴家熏肉（鼓楼商圈）切半斤带走 → ⑫ 稷山张利强麻花</li>
+          <li><b>午餐</b>：① 小贝牛肉丸子面（鼓楼北总店）或 ② 白老三（平阳广场店），配太钢汽水</li>
+          <li><b>下午</b>：⑯ 鼓楼、⑰ 平阳广场消食拍照，广场对面来盘十元炒刀削</li>
+          <li><b>晚餐</b>：⑩ 浮山烧麦馆（扁担巷）羊肉烧麦爆汁</li>
+          <li><b>夜宵</b>：⑬ 谢手艺吉县麻辣串，或鼓楼西大街夜市小吃</li>
+        </ol>
+      </div>
+      <div class="day">
+        <div class="dayhead">Day 2 · 重口味 + 洪洞支线</div>
+        <ol>
+          <li><b>早餐</b>：⑨ 崔记油茶麻花，或 ⑭ 婆婆神羊汤 + 火烧馍泡汤</li>
+          <li><b>上午</b>：⑦ 小琴劲道狗舌头（炒面片，锅气之王，饭点必排队）</li>
+          <li><b>午餐</b>：③ 三刚牛肉丸子面（重辣过瘾）或 ④ 十凤 / ⑤ 薛老五换着吃</li>
+          <li><b>下午</b>：打车北上 ㉑ 洪洞大槐树寻根祭祖园（约40分钟），“问我祖先在何处”</li>
+          <li><b>晚餐</b>：洪洞当地酥肉面 / 羊杂烩 / 黄米蒸饭，或回市区 ⑮ 张老四羊汤（车站边）</li>
+          <li><b>返程</b>：⑱ 临汾站（市区）/ ⑲ 临汾西站（高铁）</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📌 国庆出行小贴士</h2>
+    <div class="tips">
+      <div class="tipcard"><b>错峰排队</b>牛肉丸子面是临汾人的早餐信仰，名店（小贝/白老三/三刚）国庆必排队。建议早上 8 点前到，或下午 2 点后去；很多店卖完即止。</div>
+      <div class="tipcard"><b>辣度预警</b>丸子面默认辣度就不低（"正常辣≈变态辣"是外地游客共识），不能吃辣一定开口说"微辣"，并备好太钢汽水/凉菜解辣。</div>
+      <div class="tipcard"><b>价格参考</b>牛肉丸子面 9~15 元/碗（小碗起），羊汤 15~25 元，烧麦 20~30 元，火烧馍 1.5~2 元，两人一顿饭普遍 30~60 元，性价比极高。</div>
+      <div class="tipcard"><b>交通</b>高铁到临汾西站，打车进市区约 20 分钟；临汾站（普速）就在市中心。市区景点美食集中，共享单车最方便。</div>
+      <div class="tipcard"><b>周边玩法</b>国庆期间洪洞大槐树、壶口瀑布、云丘山人多，建议提前在官方公众号预约购票；大槐树距市区约 20km，半天即可往返。</div>
+      <div class="tipcard"><b>手信推荐</b>吴家熏肉（真空装）、稷山麻花、曲沃腊牛肉、安泽火腿、吉县苹果（秋季正当季），都是能带走的"临汾味道"。</div>
+    </div>
+  </div>
+
+  <details class="srcs">
+    <summary>📎 数据来源与说明（点击展开）</summary>
+    <div class="body">
+      ① 原视频：<a href="https://v.douyin.com/ETM4AIfX750/" target="_blank">抖音 · 盈盈吃不饱🍖《极限48小时逛吃临汾！两天打卡22家美食！》</a>（视频ID 7537622050908507427，2025-08-12发布，963.8万赞。视频简介未附22家店铺名单，正文受平台反爬限制无法直接读取。）<br>
+      ② 同类视频参考：<a href="https://www.bilibili.com/video/BV1DZtg6HERz/" target="_blank">B站 · 阿宝不太饱《情侣极限48小时逛吃山西临汾！两天连炫16家美食》</a>（混炒/鸡肉米线/猪肚面/狗舌头/豆腐菜/麻辣串/红豆饼/饼墩墩/酥肉面/牛肉丸子面/干拌臭豆腐）<br>
+      ③ <a href="https://www.sohu.com/a/1047689817_122855127" target="_blank">搜狐 · 《5碗面把临汾说明白》</a>（狗舌头=炒面片、白老三与三刚"请客/自嗨"之争、火烧馍、炒刀削）<br>
+      ④ <a href="https://post.smzdm.com/p/a7gmdegl/" target="_blank">什么值得买 · 《探寻临汾美食，品味地道风情》</a>（牛肉丸子面源流、老字号推荐、美食聚集地：古城路/贡院街）<br>
+      ⑤ <a href="https://www.taojinjin.com/?id=60958" target="_blank">淘金金 · 《在临汾，最好吃的18家牛肉丸子面！》</a>（小贝/二胖/薛家/白老三/十凤等排行榜）<br>
+      ⑥ <a href="https://m.xilu.com/v/1000010001250499.html" target="_blank">西陆网 · 《"华夏第一都"的10道地道风味》</a>（吴家熏肉地址、老白家丸子面地址、十大地道风味）<br>
+      ⑦ 门店坐标：携程美食（gs.ctrip.com）、city8 临汾地图（高德坐标）逐店抓取；地标坐标：OpenStreetMap Nominatim（WGS-84，页面内已自动转换为 GCJ-02）。<br>
+      ⚠️ 本地图为个人旅行参考，整理时间 2025-10；店铺营业状态、价格可能变化，出行前请以地图 App 实时信息为准。
+    </div>
+  </details>
+</div>
+
+<footer>
+  🍜 国庆临汾逛吃愉快 · 到了临汾咱是回家 · 本页面纯静态，可离线保存（地图瓦片需联网加载）
+</footer>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/leaflet/1.9.4/leaflet.min.js"
+        onerror="var s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';document.head.appendChild(s);"></script>
+<script>
+/* ================= 数据 ================= */
+var CATS = {
+  wz:{name:'牛肉丸子面',color:'#e03e36'},
+  xc:{name:'特色小吃·面食',color:'#e8842c'},
+  yt:{name:'羊汤',color:'#8e44ad'},
+  jd:{name:'地标·交通',color:'#2f7fd1'},
+  cj:{name:'周边景点',color:'#2fa36b'}
+};
+/* coord: [lat,lng]；sys: 'gcj'(高德坐标,直接使用) 或 'wgs'(OSM坐标,运行时转GCJ) */
+var SPOTS = [
+ {n:1,  cat:'wz', name:'小贝牛肉丸子面（鼓楼北总店）', sys:'gcj', coord:[36.0912123,111.5156732],
+  addr:'鼓楼北大街107号', dishes:'招牌牛肉丸子面（小碗9元起）· 卤牛肉 · 加蛋加肠',
+  note:'本地测评排行榜TOP级，辣得过瘾、辣得直冲天灵盖，嗜辣必打卡。', price:'人均 10~15元'},
+ {n:2,  cat:'wz', name:'白老三牛肉丸子面（平阳广场店）', sys:'gcj', coord:[36.0792023,111.5257781],
+  addr:'平阳中街7号', dishes:'牛肉丸子面（15元）· 素拼凉菜',
+  note:'老字号代表：汤底醇厚不燥、丸子个头大。本地人说法——"请外地朋友吃白老三"。', price:'人均 15~20元'},
+ {n:3,  cat:'wz', name:'三刚牛肉丸子面', sys:'gcj', coord:[36.081371,111.541539],
+  addr:'东大街229号（辛寺街道，近迎春街）', dishes:'重辣牛肉丸子面 · 卤香牛肉片',
+  note:'重口味路线：辣度拉满、红油给足，"自己过瘾去三刚"。配火烧馍泡红汤吃。', price:'人均 15元左右'},
+ {n:4,  cat:'wz', name:'十凤牛肉丸子面（福利巷店）', sys:'gcj', coord:[36.0686055,111.5085617],
+  addr:'福利巷（鼓楼南大街亦有分店）', dishes:'牛肉丸子面（9元/小碗）',
+  note:'面条筋道不辣口，丸子煮得软糯更入味，吃完嘴里香香的。', price:'人均 10元左右'},
+ {n:5,  cat:'wz', name:'薛老五牛肉丸子面（总店）', sys:'gcj', coord:[36.0822899,111.4970984],
+  addr:'临汾市区（总店，多平台可查分店）', dishes:'牛肉丸子面',
+  note:'主打牛肉：鲜嫩有嚼劲、卤香浓郁；美食攻略常推的老牌子。', price:'人均 10~15元'},
+ {n:6,  cat:'wz', name:'老白家二胖牛肉丸子面（东关店）', sys:'gcj', coord:[36.08309,111.53470],
+  addr:'贡院步行北街东关花园', dishes:'牛肉丸子面 · 现炸丸子',
+  note:'老白家/二胖两大名号的门店；丸子现炸肉香浓，面条筋道。（老白家另一老店在秦蜀路交通局楼下）', price:'人均 10~15元'},
+ {n:7,  cat:'xc', name:'小琴劲道狗舌头', sys:'gcj', coord:[36.0727443,111.5288686],
+  addr:'迎春南街260号', dishes:'炒狗舌头（宽面片爆炒）· 加豆芽青菜肉丝',
+  note:'"狗舌头"是手揪的舌头形面片，跟狗没关系！铁锅爆炒锅气足、边缘微焦，本地人扎堆、饭点必排队。', price:'人均 12~18元'},
+ {n:8,  cat:'xc', name:'闷闷乡村面食馆·早餐', sys:'gcj', coord:[36.0714271,111.5243682],
+  addr:'煤化巷中段8号', dishes:'豆腐菜 · 丸子面 · 甜油条 · 各式早点',
+  note:'临汾硬核早餐代表店之一：一碗豆腐菜配甜油条，开启元气一天。', price:'人均 6~12元'},
+ {n:9,  cat:'xc', name:'崔记油茶麻花（洪家楼总店）', sys:'gcj', coord:[36.08213,111.52845],
+  addr:'洪家楼南街（邮电小区西南侧）', dishes:'炒油茶 · 稷山麻花泡油茶',
+  note:'临汾早餐灵魂：热腾腾炒油茶泡麻花，暖胃顶饱。', price:'人均 5~10元'},
+ {n:10, cat:'xc', name:'浮山烧麦馆（扁担巷店）', sys:'gcj', coord:[36.08768,111.52189],
+  addr:'扁担街与后贡院胡同交叉口西侧', dishes:'羊肉烧麦（石榴形、皮薄馅大）',
+  note:'晋南名点：手工擀皮收口如石榴，蒸熟晶莹剔透，咬开爆汁。', price:'人均 20~30元'},
+ {n:11, cat:'xc', name:'吴家熏肉', sys:'gcj', coord:[36.0837785,111.516633],
+  addr:'商会巷75号门店（鼓楼商圈，另有花果街/贡院路/中骏等分店）', dishes:'熏猪头肉 · 熏肉切片 · 真空装手信',
+  note:'始于清末的百年熏肉，色泽金黄、肥而不腻、草香浓郁，"连蚊蝇都不近身"，临汾名片级手信。', price:'按斤称 · 30~60元/斤'},
+ {n:12, cat:'xc', name:'稷山张利强麻花', sys:'gcj', coord:[36.090087,111.5244808],
+  addr:'财神楼北街7号', dishes:'稷山麻花（油酥麻花）',
+  note:'稷山麻花是晋南名产：外酥内软、久放不绵，当零嘴、泡油茶都香。', price:'10~25元/份'},
+ {n:13, cat:'xc', name:'谢手艺吉县麻辣串（临汾总店）', sys:'gcj', coord:[36.09144,111.57607],
+  addr:'解放东路四季花都', dishes:'吉县麻辣串 · 涮串蘸料',
+  note:'晋南特色麻辣串，夜宵王者，撸串配汽水。', price:'人均 20~40元'},
+ {n:14, cat:'yt', name:'婆婆神羊汤（体育街总店）', sys:'gcj', coord:[36.0804906,111.5172565],
+  addr:'体育中街15号', dishes:'羊肉汤 · 羊杂 · 饼丝泡汤',
+  note:'汤色奶白、香气扑鼻，临汾人早餐"标配"，加葱花辣椒油热辣咸香。', price:'人均 15~25元'},
+ {n:15, cat:'yt', name:'张老四羊汤馆（平阳北街店）', sys:'gcj', coord:[36.0921398,111.5331527],
+  addr:'车站街街道五道庙1号楼（平阳北街西，近临汾站）', dishes:'羊汤 · 火烧馍泡汤',
+  note:'车站边老店，下车就能喝；掰一个火烧馍泡进羊汤，比米饭下饭十倍。', price:'人均 15~25元'},
+ {n:16, cat:'jd', name:'临汾鼓楼（大中楼）', sys:'wgs', coord:[36.0829306,111.5071278],
+  addr:'市中心 · 鼓楼东/西/南/北大街交汇', dishes:'',
+  note:'临汾地标，明代重建。晚上鼓楼西大街、钟楼巷一带小吃夜市热闹，吴家熏肉老店就在附近。', price:'免费'},
+ {n:17, cat:'jd', name:'平阳广场', sys:'wgs', coord:[36.0816611,111.5210319],
+  addr:'解放路街道 · 市中心广场', dishes:'',
+  note:'城市中心广场；对面有现削现炒的炒刀削小店，一分钟一盘、十元管饱。', price:'免费'},
+ {n:18, cat:'jd', name:'临汾站（普速）', sys:'wgs', coord:[36.0899957,111.5311844],
+  addr:'车站街 · 市区东部', dishes:'',
+  note:'普速列车到达站，出站即市区，周边羊汤老店多。', price:''},
+ {n:19, cat:'jd', name:'临汾西站（高铁）', sys:'wgs', coord:[36.1016296,111.4595069],
+  addr:'大西高铁 · 市区西部', dishes:'',
+  note:'高铁站，距市中心约10km，打车约20分钟；也有公交接驳。', price:''},
+ {n:20, cat:'cj', name:'洪洞大槐树寻根祭祖园（5A）', sys:'wgs', coord:[36.2716921,111.6695088],
+  addr:'洪洞县 · 市区以北约20km（车程约40分钟）', dishes:'',
+  note:'"问我祖先在何处，山西洪洞大槐树"。国庆务必提前公众号预约；景区周边可吃洪洞酥肉面、羊杂烩、黄米蒸饭。', price:'门票以官方为准'}
+];
+
+/* ================= WGS-84 → GCJ-02 ================= */
+function wgs2gcj(lat,lng){
+  var a=6378245.0, ee=0.00669342162296594323;
+  function tLat(x,y){var r=-100.0+2.0*x+3.0*y+0.2*y*y+0.1*x*y+0.2*Math.sqrt(Math.abs(x));
+    r+=(20.0*Math.sin(6.0*x*Math.PI)+20.0*Math.sin(2.0*x*Math.PI))*2.0/3.0;
+    r+=(20.0*Math.sin(y*Math.PI)+40.0*Math.sin(y/3.0*Math.PI))*2.0/3.0;
+    r+=(160.0*Math.sin(y/12.0*Math.PI)+320*Math.sin(y*Math.PI/30.0))*2.0/3.0;return r;}
+  function tLng(x,y){var r=300.0+x+2.0*y+0.1*x*x+0.1*x*y+0.1*Math.sqrt(Math.abs(x));
+    r+=(20.0*Math.sin(6.0*x*Math.PI)+20.0*Math.sin(2.0*x*Math.PI))*2.0/3.0;
+    r+=(20.0*Math.sin(x*Math.PI)+40.0*Math.sin(x/3.0*Math.PI))*2.0/3.0;
+    r+=(150.0*Math.sin(x/12.0*Math.PI)+300.0*Math.sin(x/30.0*Math.PI))*2.0/3.0;return r;}
+  var dLat=tLat(lng-105.0,lat-35.0), dLng=tLng(lng-105.0,lat-35.0);
+  var radLat=lat/180.0*Math.PI, magic=Math.sin(radLat);
+  magic=1-ee*magic*magic; var sm=Math.sqrt(magic);
+  dLat=(dLat*180.0)/((a*(1-ee))/(magic*sm)*Math.PI);
+  dLng=(dLng*180.0)/(a/sm*Math.cos(radLat)*Math.PI);
+  return [lat+dLat, lng+dLng];
+}
+
+/* ================= 地图 ================= */
+var map = L.map('map',{zoomControl:true}).setView([36.0835,111.5230],14);
+
+var amapNormal = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+  {subdomains:['1','2','3','4'],maxZoom:18,attribution:'&copy; 高德地图'});
+var amapSat = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
+  {subdomains:['1','2','3','4'],maxZoom:18,attribution:'&copy; 高德影像'});
+var amapSatRoad = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}',
+  {subdomains:['1','2','3','4'],maxZoom:18});
+var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom:19,attribution:'&copy; OpenStreetMap（注意：OSM为WGS-84坐标，标记会有偏移）'});
+
+amapNormal.addTo(map);
+L.control.layers(
+  {'高德地图':amapNormal,'高德卫星影像':L.layerGroup([amapSat,amapSatRoad]),'OSM（海外备用·标记有偏移）':osm},
+  null,{position:'topright',collapsed:true}).addTo(map);
+
+var layerGroups={}, markerById={};
+Object.keys(CATS).forEach(function(c){ layerGroups[c]=L.layerGroup().addTo(map); });
+
+SPOTS.forEach(function(s){
+  var lat=s.coord[0], lng=s.coord[1];
+  if(s.sys==='wgs'){ var g=wgs2gcj(lat,lng); lat=g[0]; lng=g[1]; }
+  var cat=CATS[s.cat];
+  var icon;
+  if(s.cat==='jd'||s.cat==='cj'){
+    icon=L.divIcon({className:'',html:'<div class="pin-lm" style="background:'+cat.color+'">'+(s.cat==='jd'?'◆':'★')+'</div>',iconSize:[22,22],iconAnchor:[11,11]});
+  }else{
+    icon=L.divIcon({className:'',html:'<div class="pin" style="background:'+cat.color+'"><span>'+s.n+'</span></div>',iconSize:[26,26],iconAnchor:[13,26],popupAnchor:[0,-26]});
+  }
+  var navUrl='https://uri.amap.com/marker?position='+lng.toFixed(6)+','+lat.toFixed(6)+'&name='+encodeURIComponent(s.name)+'&src=linfen-foodmap&coordinate=gaode&callnative=1';
+  var html='<b class="pname">'+s.n+'. '+s.name+'</b><span class="chip" style="background:'+cat.color+'">'+cat.name+'</span>'
+    +'<div class="pop-addr">📍 '+s.addr+(s.price?' ｜ 💰 '+s.price:'')+'</div>'
+    +(s.dishes?'<div class="pop-dish">🍴 '+s.dishes+'</div>':'')
+    +(s.note?'<div class="pop-note">'+s.note+'</div>':'')
+    +'<a class="nav-btn" target="_blank" href="'+navUrl+'">🧭 高德导航去这里</a>';
+  var m=L.marker([lat,lng],{icon:icon,riseOnHover:true}).bindPopup(html,{maxWidth:320});
+  m.addTo(layerGroups[s.cat]);
+  markerById[s.n]=m;
+});
+
+/* ================= 侧栏列表 & 筛选 ================= */
+var activeCats={}; Object.keys(CATS).forEach(function(c){activeCats[c]=true;});
+
+function renderFilters(){
+  var box=document.getElementById('filters'); box.innerHTML='';
+  Object.keys(CATS).forEach(function(c){
+    var cnt=SPOTS.filter(function(s){return s.cat===c;}).length;
+    var b=document.createElement('div');
+    b.className='fbtn'+(activeCats[c]?'':' off');
+    b.innerHTML='<span class="dot" style="background:'+CATS[c].color+'"></span>'+CATS[c].name+' ('+cnt+')';
+    b.onclick=function(){activeCats[c]=!activeCats[c];
+      if(activeCats[c]){map.addLayer(layerGroups[c]);}else{map.removeLayer(layerGroups[c]);}
+      renderFilters();renderList();};
+    box.appendChild(b);
+  });
+}
+function renderList(){
+  var box=document.getElementById('spotList'); box.innerHTML='';
+  Object.keys(CATS).forEach(function(c){
+    var items=SPOTS.filter(function(s){return s.cat===c;});
+    if(!items.length)return;
+    var h=document.createElement('div');
+    h.className='grouptitle';
+    h.innerHTML='<span class="dot" style="background:'+CATS[c].color+'"></span>'+CATS[c].name+' <small>'+items.length+'处</small>';
+    if(!activeCats[c]){h.style.opacity=.4;}
+    box.appendChild(h);
+    items.forEach(function(s){
+      var d=document.createElement('div');
+      d.className='spot'+(activeCats[c]?'':' hidden');
+      d.innerHTML='<div class="num" style="background:'+CATS[c].color+'">'+s.n+'</div>'
+        +'<div class="info"><b>'+s.name+'</b><span>📍 '+s.addr+(s.price?' ｜ '+s.price:'')+'</span></div>';
+      d.onclick=function(){
+        if(!activeCats[c]){activeCats[c]=true;map.addLayer(layerGroups[c]);renderFilters();renderList();}
+        map.flyTo(markerById[s.n].getLatLng(),16,{duration:.8});
+        setTimeout(function(){markerById[s.n].openPopup();},850);
+      };
+      box.appendChild(d);
+    });
+  });
+}
+renderFilters(); renderList();
+
+/* ================= 视野控制 ================= */
+var cityCenter=[36.0835,111.5230];
+function zoomCity(){ map.flyTo(cityCenter,14,{duration:.8}); }
+function zoomAll(){
+  var b=L.latLngBounds(SPOTS.map(function(s){
+    var lat=s.coord[0],lng=s.coord[1];
+    if(s.sys==='wgs'){var g=wgs2gcj(lat,lng);lat=g[0];lng=g[1];}
+    return [lat,lng];
+  }));
+  map.flyToBounds(b.pad(0.08),{duration:1});
+}
+</script>
+</body>
+</html>

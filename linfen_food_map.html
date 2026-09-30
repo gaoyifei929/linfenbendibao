@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>临汾国庆美食地图</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #e74c3c;
+            --primary-dark: #c0392b;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --border: #e0e0e0;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --sidebar-width: 380px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .header-title h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .header-title p {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .header-source {
+            font-size: 11px;
+            opacity: 0.8;
+            text-align: right;
+        }
+
+        .header-source a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            position: fixed;
+            top: 60px;
+            left: var(--sidebar-width);
+            right: 0;
+            z-index: 999;
+            background: white;
+            padding: 10px 16px;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            border-bottom: 1px solid var(--border);
+            scrollbar-width: none;
+        }
+
+        .filter-bar::-webkit-scrollbar { display: none; }
+
+        .filter-btn {
+            flex-shrink: 0;
+            padding: 6px 16px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: white;
+            color: var(--text);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: white;
+            border-right: 1px solid var(--border);
+            z-index: 998;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-count {
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 400;
+        }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .food-card {
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            margin-bottom: 4px;
+        }
+
+        .food-card:hover {
+            background: #fef5f5;
+            border-color: #fdd;
+        }
+
+        .food-card.active {
+            background: #fef0f0;
+            border-color: var(--primary);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+
+        .card-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.3;
+        }
+
+        .card-rating {
+            color: #f39c12;
+            font-size: 13px;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+
+        .card-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #f0f0f0;
+            color: var(--text-light);
+        }
+
+        .card-tag.specialty { background: #fff3e0; color: #e67e22; }
+        .card-tag.must-eat { background: #fce4ec; color: #e74c3c; }
+
+        .card-info {
+            font-size: 12px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .card-price { color: var(--primary); font-weight: 500; }
+
+        /* Route Panel */
+        .route-panel {
+            border-top: 1px solid var(--border);
+            max-height: 40%;
+            overflow-y: auto;
+        }
+
+        .route-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .route-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .route-tab:hover { background: #fafafa; }
+        .route-tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .route-content { padding: 12px; display: none; }
+        .route-content.active { display: block; }
+
+        .route-step {
+            display: flex;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .route-step:last-child { border-bottom: none; }
+
+        .step-time {
+            flex-shrink: 0;
+            width: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+            padding-top: 2px;
+        }
+
+        .step-detail {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .step-name { font-weight: 600; color: var(--text); }
+        .step-desc { color: var(--text-light); font-size: 12px; margin-top: 2px; }
+
+        /* Map */
+        #map {
+            position: fixed;
+            top: 100px;
+            left: var(--sidebar-width);
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+
+        /* Popup Styles */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            padding: 0 !important;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+        }
+
+        .leaflet-popup-content {
+            margin: 0 !important;
+            width: 300px !important;
+        }
+
+        .popup-card {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+
+        .popup-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 13px;
+        }
+
+        .popup-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .popup-body { padding: 14px; }
+
+        .popup-name {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .popup-rating {
+            color: #f39c12;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .popup-meta {
+            font-size: 12px;
+            color: var(--text-light);
+            line-height: 1.8;
+        }
+
+        .popup-meta strong { color: var(--text); }
+
+        .popup-reason {
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: #fef9f0;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #8b6914;
+            line-height: 1.5;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            :root { --sidebar-width: 0px; }
+            
+            .sidebar {
+                width: 100%;
+                top: auto;
+                bottom: 0;
+                height: 45vh;
+                border-right: none;
+                border-top: 1px solid var(--border);
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            }
+
+            .filter-bar { left: 0; top: 56px; }
+            #map { left: 0; top: 96px; bottom: 45vh; }
+            
+            .header { padding: 10px 16px; }
+            .header-title h1 { font-size: 17px; }
+            .header-source { display: none; }
+
+            .sidebar.collapsed { height: 50px; }
+            .sidebar.collapsed .sidebar-list,
+            .sidebar.collapsed .route-panel { display: none; }
+
+            .sidebar-toggle {
+                display: block;
+                width: 40px;
+                height: 4px;
+                background: #ddd;
+                border-radius: 2px;
+                margin: 8px auto;
+                cursor: pointer;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .sidebar-toggle { display: none; }
+        }
+
+        /* Custom Marker */
+        .custom-marker {
+            background: var(--primary);
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: white;
+            transition: transform 0.2s;
+        }
+
+        .custom-marker:hover { transform: scale(1.2); }
+        .custom-marker.active { 
+            background: #2c3e50; 
+            transform: scale(1.3);
+            z-index: 999 !important;
+        }
+
+        /* Video Source Section */
+        .video-source {
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .video-source a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .video-source a:hover { text-decoration: underline; }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: white;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #eee;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <!-- Loading -->
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载临汾美食地图...</div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-title">
+            <h1>🍜 临汾国庆美食地图</h1>
+            <p>根据抖音探店视频「阿宝不饱～」整理 · 48小时16家美食</p>
+        </div>
+        <div class="header-source">
+            视频来源：<a href="https://v.douyin.com/KTdcFf9_-_U/" target="_blank">抖音 @阿宝不饱～</a>
+        </div>
+    </header>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar" id="filterBar">
+        <!-- Filters injected by JS -->
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-toggle" id="sidebarToggle"></div>
+        <div class="sidebar-header">
+            <span>📋 美食清单</span>
+            <span class="sidebar-count" id="foodCount">0 家</span>
+        </div>
+        <div class="sidebar-list" id="sidebarList">
+            <!-- Cards injected by JS -->
+        </div>
+        
+        <!-- Route Planning -->
+        <div class="route-panel">
+            <div class="route-tabs">
+                <div class="route-tab active" data-route="1day">一日路线</div>
+                <div class="route-tab" data-route="2day">两日路线</div>
+            </div>
+            <div class="route-content active" id="route1day">
+                <!-- Route 1 injected by JS -->
+            </div>
+            <div class="route-content" id="route2day">
+                <!-- Route 2 injected by JS -->
+            </div>
+        </div>
+
+        <!-- Video Source -->
+        <div class="video-source">
+            📹 <strong>视频来源：</strong>抖音 @阿宝不饱～<br>
+            「情侣极限48小时逛吃山西临汾！两天连炫16家美食」<br>
+            <a href="https://v.douyin.com/KTdcFf9_-_U/" target="_blank">点击查看原视频 →</a><br>
+            <span style="font-size:10px;opacity:0.7;">⚠️ 部分信息经公开资料核实，标注"暂未确认"的请以实际为准</span>
+        </div>
+    </aside>
+
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+    // ==========================================
+    // 📍 临汾美食数据（集中管理，方便后续添加）
+    // ==========================================
+    const foodLocations = [
+        {
+            id: '1',
+            name: '薛老五牛肉丸子面(总店)',
+            lat: 36.0805,
+            lng: 111.5020,
+            address: '临汾市尧都区鼓楼西街道滨河路彩虹龙街A栋301号',
+            area: '尧都区·鼓楼西',
+            dishes: '牛肉丸子面、麻辣牛肉面、牛杂、麻花、涮牛肉',
+            price: '29元',
+            hours: '09:00-24:00',
+            rating: 5,
+            tags: ['必吃', '临汾特色', '面食'],
+            categories: ['noodle', 'specialty', 'must-eat', 'lunch', 'dinner', 'night'],
+            mealTime: '午餐/晚餐/夜宵',
+            reason: '视频中人气爆棚！排队人超多，份量足口味佳，牛肉给得很足味正，临汾牛肉丸子面网红店。',
+            queue: '高峰期需排队30分钟+',
+            icon: '🍜',
+            image: 'https://dimg04.c-ctrip.com/images/1tx2o12000snlwpzwD7AE_D_750_450_Q90.webp',
+            verified: true
+        },
+        {
+            id: '2',
+            name: '白娃·小炖肉拌面(车站街店)',
+            lat: 36.0855,
+            lng: 111.5220,
+            address: '临汾市尧都区车站路亚朵酒店对面西50米（金海宫大酒店旁）',
+            area: '尧都区·车站街',
+            dishes: '小炖肉拌面、红烧牛肉面、酥肉面、稍子面、肥肠面',
+            price: '17元',
+            hours: '09:00-22:00',
+            rating: 5,
+            tags: ['必吃', '面食', '临汾特色'],
+            categories: ['noodle', 'must-eat', 'specialty', 'breakfast', 'lunch', 'dinner'],
+            mealTime: '早餐/午餐/晚餐',
+            reason: '视频中强推！平民面馆，面条粗而劲道有嚼劲，酱汁浓郁，红烧牛肉面里的牛肉巨好吃，出菜速度快，价格亲民。',
+            queue: '饭点需排队',
+            icon: '🍝',
+            image: 'https://dimg04.c-ctrip.com/images/1mh0j12000bjt6wr2EF7F_D_750_450_Q90.jpg',
+            verified: true
+        },
+        {
+            id: '3',
+            name: '李家丸子(钟楼店)',
+            lat: 36.0892,
+            lng: 111.5188,
+            address: '临汾市尧都区鼓楼对面（钟楼店）',
+            area: '尧都区·鼓楼',
+            dishes: '丸子汤',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 4,
+            tags: ['临汾特色', '小吃'],
+            categories: ['snack', 'specialty', 'breakfast', 'lunch'],
+            mealTime: '早餐/午餐',
+            reason: '视频中推荐！丸子是面粉做的口感夯实，汤特别好喝，强烈推荐，位于鼓楼对面位置便利。',
+            queue: '一般无需排队',
+            icon: '🍲',
+            image: null,
+            verified: true
+        },
+        {
+            id: '4',
+            name: '老三春卷',
+            lat: 36.0898,
+            lng: 111.5175,
+            address: '临汾市尧都区王麻子巷与鼓楼北大街交叉口',
+            area: '尧都区·鼓楼北',
+            dishes: '肉春卷、素春卷',
+            price: '3-4元/根',
+            hours: '暂未确认',
+            rating: 4,
+            tags: ['小吃'],
+            categories: ['snack', 'breakfast', 'lunch'],
+            mealTime: '早餐/午餐/小吃',
+            reason: '视频中出现！热乎的春卷外表酥脆，肉的4元/根素的3元/根，过油后口感不错，鼓楼附近经典小吃。',
+            queue: '一般无需排队',
+            icon: '🥟',
+            image: null,
+            verified: true
+        },
+        {
+            id: '5',
+            name: '豆面抿尖王',
+            lat: 36.0830,
+            lng: 111.5145,
+            address: '临汾市尧都区常兴中街新松小区',
+            area: '尧都区·常兴中街',
+            dishes: '南瓜肉抿圪斗',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 4,
+            tags: ['临汾特色', '面食'],
+            categories: ['noodle', 'specialty', 'lunch', 'dinner'],
+            mealTime: '午餐/晚餐',
+            reason: '视频中推荐！南瓜+炸酱肉沫卤汁浇在面疙瘩上，一次能炫几大碗，临汾特色抿尖面的代表店。',
+            queue: '一般无需排队',
+            icon: '🎃',
+            image: null,
+            verified: true
+        },
+        {
+            id: '6',
+            name: '清真老白家十凤牛肉丸子面',
+            lat: 36.0865,
+            lng: 111.5200,
+            address: '临汾市尧都区经济开发区（具体地址视频中提及）',
+            area: '尧都区·经济开发区',
+            dishes: '十凤牛肉丸子面',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 4,
+            tags: ['临汾特色', '面食'],
+            categories: ['noodle', 'specialty', 'breakfast', 'lunch', 'dinner'],
+            mealTime: '早餐/午餐/晚餐',
+            reason: '临汾老牌牛肉丸子面店，肥瘦相间的牛肉类似牛五花口感，油脂香足，辣度温和融在汤里，性价比高。',
+            queue: '一般无需排队',
+            icon: '🍜',
+            image: null,
+            verified: false
+        },
+        {
+            id: '7',
+            name: '三毛牛肉丸子面(乡贤路店)',
+            lat: 36.0848,
+            lng: 111.5158,
+            address: '临汾市尧都区乡贤路',
+            area: '尧都区·乡贤路',
+            dishes: '干拌牛肉丸子面',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 5,
+            tags: ['必吃', '临汾特色', '面食'],
+            categories: ['noodle', 'specialty', 'must-eat', 'lunch', 'dinner', 'night'],
+            mealTime: '午餐/晚餐/夜宵',
+            reason: '本地食客心中排名第一！干拌款面条裹满秘制辣酱，每根挂着咸香肉粒，辣得够劲不烧胃，无限回头客。',
+            queue: '高峰期需排队',
+            icon: '🍜',
+            image: null,
+            verified: false
+        },
+        {
+            id: '8',
+            name: '白三刚牛肉丸子面',
+            lat: 36.0858,
+            lng: 111.5215,
+            address: '临汾市尧都区铁路东街道',
+            area: '尧都区·铁路东',
+            dishes: '牛肉丸子面',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 5,
+            tags: ['必吃', '临汾特色', '面食'],
+            categories: ['noodle', 'specialty', 'must-eat', 'breakfast', 'lunch', 'dinner'],
+            mealTime: '早餐/午餐/晚餐',
+            reason: '本地食客排名第二！汤底浓郁辣度适中，牛肉给得实在嚼着特别香，连吃6次还上瘾。',
+            queue: '一般无需排队',
+            icon: '🍜',
+            image: null,
+            verified: false
+        },
+        {
+            id: '9',
+            name: '小琴劲道狗舌头',
+            lat: 36.0842,
+            lng: 111.5192,
+            address: '临汾市尧都区迎春南街260号',
+            area: '尧都区·迎春南街',
+            dishes: '狗舌头面片、擦圪料酸菜豆腐肉、西红柿鸡蛋狗舌头、肥肠狗舌头、猪蹄',
+            price: '25元',
+            hours: '10:30-15:00, 17:30-22:00',
+            rating: 4,
+            tags: ['临汾特色', '面食'],
+            categories: ['noodle', 'specialty', 'lunch', 'dinner'],
+            mealTime: '午餐/晚餐',
+            reason: '隐藏彩蛋级小店！"狗舌头"是宽宽筋道面片，口感扎实裹调料超香，猪蹄炖得烂糊入味，人气旺翻台快。',
+            queue: '高峰期需排队',
+            icon: '🍝',
+            image: 'https://dimg04.c-ctrip.com/images/1tx6s12000suxg8pl1BEE_D_750_450_Q90.webp',
+            verified: true
+        },
+        {
+            id: '10',
+            name: '同盛福烤肉(中大街店)',
+            lat: 36.0870,
+            lng: 111.5140,
+            address: '临汾市尧都区向阳西路中大街圣会家天下二层',
+            area: '尧都区·中大街',
+            dishes: '烤五花肉、黑椒牛肉粒、羊肉串、烤牛板筋、韩式牛肉、芝士肋排、朝鲜冷面',
+            price: '98元',
+            hours: '10:00-21:30',
+            rating: 4,
+            tags: ['烧烤'],
+            categories: ['bbq', 'lunch', 'dinner'],
+            mealTime: '午餐/晚餐',
+            reason: '临汾知名烤肉老店！肉质新鲜烤出来油滋滋，环境舒服灯光暖，服务员全程帮烤火候刚好，适合朋友聚餐。',
+            queue: '一般无需排队',
+            icon: '🍖',
+            image: 'https://dimg04.c-ctrip.com/images/1tx2n12000snlx83085FC_D_750_450_Q90.webp',
+            verified: true
+        },
+        {
+            id: '11',
+            name: '陶唐会馆',
+            lat: 36.0820,
+            lng: 111.5170,
+            address: '临汾市尧都区尧庙镇尧庙烈士陵园附近(尧都区敬老院对面)',
+            area: '尧都区·尧庙',
+            dishes: '老汤卤牛肉、德国小肘花、夫妻肺片、玉米萝卜炖排骨、老味道酱肉包、霸王鲈鱼、蒜香牛蛙',
+            price: '83元',
+            hours: '10:00-14:30, 17:00-21:00',
+            rating: 4,
+            tags: ['临汾特色'],
+            categories: ['specialty', 'lunch', 'dinner'],
+            mealTime: '午餐/晚餐',
+            reason: '华北首家以尧文化为主题的大型主题餐饮旗舰店，坐落于尧庙公园内，用民间古董石雕木雕全景呈现华美空间，菜品口味好上菜快。',
+            queue: '一般无需排队',
+            icon: '🏮',
+            image: 'https://dimg04.c-ctrip.com/images/1tx1v12000snlx7q6335C_D_750_450_Q90.webp',
+            verified: true
+        },
+        {
+            id: '12',
+            name: '东城夜市(新新刀拨面)',
+            lat: 36.0888,
+            lng: 111.5230,
+            address: '临汾市尧都区东城夜市（解放东路附近）',
+            area: '尧都区·东城',
+            dishes: '刀拨面、猛火爆炒菜、菜汤子拌手工刀拨面',
+            price: '暂未确认',
+            hours: '夜间（夜市时段）',
+            rating: 5,
+            tags: ['必吃', '夜宵', '面食', '临汾特色'],
+            categories: ['noodle', 'specialty', 'night', 'must-eat'],
+            mealTime: '夜宵',
+            reason: '特别local的夜市！红棚子里四家大厨并排炒菜，新新家的刀拨面咔咔带劲，大哥猛火爆炒颠锅手艺绝佳，烟火气十足。',
+            queue: '一般无需排队',
+            icon: '🌃',
+            image: null,
+            verified: false
+        },
+        {
+            id: '13',
+            name: '烤梨先生(临汾福利巷店)',
+            lat: 36.0862,
+            lng: 111.5150,
+            address: '临汾市尧都区福利巷',
+            area: '尧都区·福利巷',
+            dishes: '烤梨、甜品',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 3,
+            tags: ['甜品饮品'],
+            categories: ['snack'],
+            mealTime: '下午茶/夜宵',
+            reason: '临汾特色甜品店！烤梨温润香甜，适合饭后或逛街时来一份，福利巷位置方便。',
+            queue: '一般无需排队',
+            icon: '🍐',
+            image: null,
+            verified: false
+        },
+        {
+            id: '14',
+            name: '成瑞家菜煎饼(中大街店)',
+            lat: 36.0872,
+            lng: 111.5148,
+            address: '临汾市尧都区中大街',
+            area: '尧都区·中大街',
+            dishes: '菜煎饼',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 3,
+            tags: ['小吃'],
+            categories: ['snack', 'breakfast', 'lunch'],
+            mealTime: '早餐/午餐/小吃',
+            reason: '山东风味菜煎饼在临汾的落地版！外皮酥脆内馅丰富，中大街位置便利适合快速解决一餐。',
+            queue: '一般无需排队',
+            icon: '🥞',
+            image: null,
+            verified: false
+        },
+        {
+            id: '15',
+            name: '谷多工坊(三和店)',
+            lat: 36.0852,
+            lng: 111.5162,
+            address: '临汾市尧都区三和区域',
+            area: '尧都区·三和',
+            dishes: '烘焙面包、糕点',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 3,
+            tags: ['甜品饮品'],
+            categories: ['snack', 'breakfast'],
+            mealTime: '早餐/下午茶',
+            reason: '临汾本地烘焙品牌！面包糕点新鲜，适合作为早餐或下午茶选择。',
+            queue: '一般无需排队',
+            icon: '🥐',
+            image: null,
+            verified: false
+        },
+        {
+            id: '16',
+            name: '小芳牛肉丸子面',
+            lat: 36.0868,
+            lng: 111.5178,
+            address: '临汾市尧都区（具体地址视频中提及）',
+            area: '尧都区',
+            dishes: '牛肉丸子面',
+            price: '暂未确认',
+            hours: '暂未确认',
+            rating: 4,
+            tags: ['临汾特色', '面食'],
+            categories: ['noodle', 'specialty', 'breakfast', 'lunch', 'dinner'],
+            mealTime: '早餐/午餐/晚餐',
+            reason: '中规中矩但不出错！面条煮得火候刚好不软不硬，牛肉丸Q弹咬开能吃到肉粒，汤底咸淡适中。',
+            queue: '一般无需排队',
+            icon: '🍜',
+            image: null,
+            verified: false
+        }
+    ];
+
+    // ==========================================
+    // 🗺️ 路线规划数据
+    // ==========================================
+    const routes = {
+        oneDay: [
+            { time: '07:30', name: '🌅 李家丸子(鼓楼店)', desc: '早餐：丸子汤+面粉丸子，开启临汾美食之旅' },
+            { time: '09:00', name: '🏛️ 鼓楼广场漫步', desc: '游览临汾地标鼓楼，感受古城风貌' },
+            { time: '10:30', name: '🥟 老三春卷', desc: '小吃：肉春卷/素春卷，外酥里嫩' },
+            { time: '12:00', name: '🍝 白娃小炖肉拌面', desc: '午餐：强推红烧牛肉面，牛肉巨好吃' },
+            { time: '14:00', name: '🏮 尧庙公园', desc: '参观尧庙，了解华夏文明发祥地历史' },
+            { time: '16:00', name: '🎃 豆面抿尖王', desc: '下午茶：南瓜肉抿圪斗，特色面食体验' },
+            { time: '18:00', name: '🌃 鼓楼夜市小吃街', desc: '晚餐+夜宵：炒凉粉、碗托、灌肠、烤串，烟火气十足' },
+            { time: '20:00', name: '🍜 薛老五牛肉丸子面', desc: '夜宵加餐：人气爆棚的牛肉丸子面，排队也值得' }
+        ],
+        twoDay: [
+            { time: 'DAY1 07:30', name: '🌅 临汾豆腐菜', desc: '早餐：辣魂担当，嫩豆腐+羊骨汤+烧饼' },
+            { time: 'DAY1 09:30', name: '☕ 临汾油茶摊', desc: '早茶：油茶配麻花，老一辈的热乎劲' },
+            { time: 'DAY1 11:00', name: '🏛️ 鼓楼广场+老街', desc: '游览鼓楼、老街，拍照打卡' },
+            { time: 'DAY1 12:30', name: '🍜 三毛牛肉丸子面', desc: '午餐：本地人心中的No.1，干拌款绝了' },
+            { time: 'DAY1 14:30', name: '🏮 陶唐会馆', desc: '参观尧文化主题餐厅，感受华美空间' },
+            { time: 'DAY1 17:00', name: '🍖 同盛福烤肉', desc: '晚餐：知名烤肉老店，服务员帮烤，适合聚餐' },
+            { time: 'DAY1 20:00', name: '🌃 东城夜市', desc: '夜宵：新新刀拨面+猛火爆炒，local烟火气' },
+            { time: 'DAY2 08:00', name: '🍲 张老四羊汤馆', desc: '早餐：羊杂汤，评分4.5，暖胃神器' },
+            { time: 'DAY2 10:00', name: '🥯 阿甘锅盔', desc: '小吃：外皮酥脆内里柔软，夹肉更香' },
+            { time: 'DAY2 11:30', name: '🍝 小琴劲道狗舌头', desc: '午餐：隐藏彩蛋，宽面片+猪蹄，人气旺' },
+            { time: 'DAY2 14:00', name: '🏞️ 汾河公园', desc: '散步消食，欣赏汾河风光' },
+            { time: 'DAY2 16:00', name: '🍐 烤梨先生', desc: '下午茶：烤梨温润香甜，逛街解腻' },
+            { time: 'DAY2 18:00', name: '🍜 白三刚牛肉丸子面', desc: '晚餐：本地人排名第二，汤底浓郁' },
+            { time: 'DAY2 20:30', name: '🥣 鼓楼夜市碗托', desc: '夜宵：荞麦碗托+蒜泥辣椒油，酸辣开胃' }
+        ]
+    };
+
+    // ==========================================
+    // 🎯 筛选分类配置
+    // ==========================================
+    const filterCategories = [
+        { key: 'all', label: '全部', icon: '🍽️' },
+        { key: 'must-eat', label: '必吃', icon: '⭐' },
+        { key: 'breakfast', label: '早餐', icon: '🌅' },
+        { key: 'lunch', label: '午餐', icon: '☀️' },
+        { key: 'dinner', label: '晚餐', icon: '🌙' },
+        { key: 'snack', label: '小吃', icon: '🍡' },
+        { key: 'noodle', label: '面食', icon: '🍜' },
+        { key: 'bbq', label: '烧烤', icon: '🍢' },
+        { key: 'specialty', label: '临汾特色', icon: '🏮' },
+        { key: 'night', label: '夜宵', icon: '🌃' }
+    ];
+
+    // ==========================================
+    // 🔧 核心逻辑
+    // ==========================================
+    let map, markers = {}, activeFilter = 'all', activeCardId = null;
+
+    function init() {
+        initMap();
+        renderFilters();
+        renderSidebar();
+        renderRoutes();
+        bindEvents();
+        
+        // Hide loading
+        setTimeout(() => {
+            document.getElementById('loading').style.opacity = '0';
+            setTimeout(() => document.getElementById('loading').remove(), 300);
+        }, 500);
+    }
+
+    function initMap() {
+        // 临汾市中心坐标
+        map = L.map('map', {
+            center: [36.088, 111.519],
+            zoom: 14,
+            zoomControl: false,
+            attributionControl: false
+        });
+
+        // 使用 OpenStreetMap 瓦片
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // 添加缩放控件到右下角
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // 添加所有标记
+        foodLocations.forEach(food => addMarker(food));
+    }
+
+    function addMarker(food) {
+        if (!food.lat || !food.lng) return;
+
+        const icon = L.divIcon({
+            className: '',
+            html: `<div class="custom-marker" id="marker-${food.id}" title="${food.name}">${food.icon || '🍴'}</div>`,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+            popupAnchor: [0, -20]
+        });
+
+        const marker = L.marker([food.lat, food.lng], { icon })
+            .addTo(map)
+            .bindPopup(createPopupContent(food), { 
+                maxWidth: 320, 
+                closeButton: true,
+                className: 'custom-popup'
+            });
+
+        marker.on('mouseover', () => marker.openPopup());
+        marker.on('click', () => selectFood(food.id));
+
+        markers[food.id] = marker;
+    }
+
+    function createPopupContent(food) {
+        const stars = '★'.repeat(food.rating) + '☆'.repeat(5 - food.rating);
+        const imgUrl = food.image 
+            ? `<img src="${food.image}" alt="${food.name}" onerror="this.parentElement.innerHTML='暂无可靠图片'">`
+            : '暂无可靠图片';
+        
+        return `
+            <div class="popup-card">
+                <div class="popup-img">${imgUrl}</div>
+                <div class="popup-body">
+                    <div class="popup-name">${food.name}</div>
+                    <div class="popup-rating">${stars}</div>
+                    <div class="popup-meta">
+                        <strong>推荐菜：</strong>${food.dishes || '暂未确认'}<br>
+                        <strong>人均：</strong><span style="color:#e74c3c;font-weight:600">${food.price || '暂未确认'}</span><br>
+                        <strong>营业时间：</strong>${food.hours || '暂未确认'}<br>
+                        <strong>地址：</strong>${food.address || '地址暂未确认'}<br>
+                        <strong>排队：</strong>${food.queue || '视情况而定'}
+                    </div>
+                    ${food.reason ? `<div class="popup-reason">💡 ${food.reason}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderFilters() {
+        const bar = document.getElementById('filterBar');
+        bar.innerHTML = filterCategories.map(cat => 
+            `<button class="filter-btn ${cat.key === 'all' ? 'active' : ''}" 
+                     data-filter="${cat.key}">
+                ${cat.icon} ${cat.label}
+            </button>`
+        ).join('');
+    }
+
+    function renderSidebar(filteredFoods) {
+        const foods = filteredFoods || foodLocations;
+        const list = document.getElementById('sidebarList');
+        document.getElementById('foodCount').textContent = `${foods.length} 家`;
+
+        list.innerHTML = foods.map(food => {
+            const stars = '★'.repeat(food.rating) + '☆'.repeat(5 - food.rating);
+            const tags = [];
+            if (food.tags) food.tags.forEach(t => {
+                const cls = t === '临汾特色' ? 'specialty' : t === '必吃' ? 'must-eat' : '';
+                tags.push(`<span class="card-tag ${cls}">${t}</span>`);
+            });
+
+            return `
+                <div class="food-card" data-id="${food.id}" onclick="selectFood('${food.id}')">
+                    <div class="card-top">
+                        <div class="card-name">${food.icon || '🍴'} ${food.name}</div>
+                        <div class="card-rating">${stars}</div>
+                    </div>
+                    <div class="card-tags">${tags.join('')}</div>
+                    <div class="card-info">
+                        <span class="card-price">💰 ${food.price || '未知'}</span> · 
+                        🕐 ${food.mealTime || '全天'} · 
+                        📍 ${food.area || '尧都区'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderRoutes() {
+        const renderSteps = (steps) => steps.map(s => `
+            <div class="route-step">
+                <div class="step-time">${s.time}</div>
+                <div class="step-detail">
+                    <div class="step-name">${s.name}</div>
+                    <div class="step-desc">${s.desc}</div>
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('route1day').innerHTML = renderSteps(routes.oneDay);
+        document.getElementById('route2day').innerHTML = renderSteps(routes.twoDay);
+    }
+
+    function selectFood(id) {
+        // Update active card
+        document.querySelectorAll('.food-card').forEach(c => c.classList.remove('active'));
+        const card = document.querySelector(`.food-card[data-id="${id}"]`);
+        if (card) {
+            card.classList.add('active');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Update marker
+        document.querySelectorAll('.custom-marker').forEach(m => m.classList.remove('active'));
+        const markerEl = document.getElementById(`marker-${id}`);
+        if (markerEl) markerEl.classList.add('active');
+
+        // Pan map and open popup
+        const food = foodLocations.find(f => f.id === id);
+        if (food && food.lat && food.lng) {
+            map.flyTo([food.lat, food.lng], 16, { duration: 0.8 });
+            if (markers[id]) {
+                setTimeout(() => markers[id].openPopup(), 400);
+            }
+        }
+
+        activeCardId = id;
+    }
+
+    function applyFilter(key) {
+        activeFilter = key;
+        
+        // Update buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === key);
+        });
+
+        // Filter foods
+        let filtered;
+        if (key === 'all') {
+            filtered = foodLocations;
+        } else if (key === 'must-eat') {
+            filtered = foodLocations.filter(f => f.tags && f.tags.includes('必吃'));
+        } else if (key === 'specialty') {
+            filtered = foodLocations.filter(f => f.tags && f.tags.includes('临汾特色'));
+        } else {
+            filtered = foodLocations.filter(f => 
+                f.categories && f.categories.includes(key)
+            );
+        }
+
+        // Update sidebar
+        renderSidebar(filtered);
+
+        // Show/hide markers
+        foodLocations.forEach(food => {
+            const marker = markers[food.id];
+            if (!marker) return;
+            
+            const visible = filtered.some(f => f.id === food.id);
+            if (visible) {
+                marker.addTo(map);
+            } else {
+                map.removeLayer(marker);
+            }
+        });
+    }
+
+    function bindEvents() {
+        // Filter clicks
+        document.getElementById('filterBar').addEventListener('click', e => {
+            if (e.target.classList.contains('filter-btn')) {
+                applyFilter(e.target.dataset.filter);
+            }
+        });
+
+        // Route tabs
+        document.querySelectorAll('.route-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.route-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.route-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.route === '1day' ? 'route1day' : 'route2day').classList.add('active');
+            });
+        });
+
+        // Mobile sidebar toggle
+        const toggle = document.getElementById('sidebarToggle');
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('collapsed');
+            });
+        }
+    }
+
+    // Initialize when DOM ready
+    document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
